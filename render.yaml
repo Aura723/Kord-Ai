@@ -16,13 +16,13 @@ services:
         value:2349018949706
 
       - key: WORKTYPE
-        value: ""
+        value:private
 
       - key: PREFIX
         value:[.? *]
 
       - key: TIMEZONE
-        value:
+        value:Africa/Lagos
 
       - key: OWNER_NAME
         value:lordaura
