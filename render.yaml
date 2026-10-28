@@ -10,25 +10,25 @@ services:
 
     envVars:
       - key: SESSION_ID
-        value:kord_ai-BMjYvbYCR02f8Ys8
+        sync: false
 
       - key: OWNER_NUMBER
-        value:2349018949706
+        value: "2349018949706"
 
       - key: WORKTYPE
-        value:private
+        value: "private"
 
       - key: PREFIX
-        value:[.? *]
+        value: "[.? *]"
 
       - key: TIMEZONE
-        value:Africa/Lagos
+        value: "Africa/Lagos"
 
       - key: OWNER_NAME
-        value:lordaura
+        value: "lordaura"
 
       - key: BOT_NAME
-        value:kord ai
+        value: "kord ai"
 
       - key: RENDER_API_KEY
-        value:rnd_ZLhyjKzTrthYHafaCeqvO95PEokl
+        sync: false
