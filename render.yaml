@@ -19,16 +19,16 @@ services:
         value: ""
 
       - key: PREFIX
-        value: ""
+        value:
 
       - key: TIMEZONE
-        value: ""
+        value:
 
       - key: OWNER_NAME
-        value: ""
+        value:lordaura
 
       - key: BOT_NAME
-        value: ""
+        value:kord ai
 
       - key: RENDER_API_KEY
-        value:
+        value:rnd_ZLhyjKzTrthYHafaCeqvO95PEokl
