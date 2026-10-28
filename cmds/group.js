@@ -644,65 +644,168 @@ cmd: "revoke",
   }
 })
 
+
+
+
+
+kord({
+  cmd: "forward|fwrd",
+  desc: "forward a message",
+  fromMe: true,
+  type: "user",
+}, async (m, text, cmd, store) => {
+  try {
+    if (!m.quoted) return await m.send("_reply to the msg you want to forward.._");
+    if (!text) return await m.send(`_*Provide a number/jid!*_\n_example ${cmd} 2348033221144_\n_${cmd} 2348033221144@s.whatsapp.net_\n\nuse ${prefix}jid to get the jid of a chat`);
+
+    let jids = text.split(",").map(j => j.trim()).filter(j => j.length > 0);
+    let sentTo = [];
+
+    for (let rawJid of jids) {
+      let jidd = rawJid;
+      if (!jidd.includes("@")) {
+        jidd = `${jidd}@s.whatsapp.net`;
+      }
+
+      await m.forwardMessage(jidd, await store.findMsg(m.quoted.id));
+      sentTo.push(jidd);
+      await sleep(1000);
+    }
+
+    return await m.send(`_Forwarded to ${sentTo.join(", ")}_`);
+  } catch (e) {
+    console.log("cmd error", e);
+    return await m.sendErr(e);
+  }
+});
+
 kord({
   cmd: "tag",
-  desc: "tag all memebers/admins/me/text",
+  desc: "tag all members/admins/me/text",
   fromMe: wtype,
   gc: true,
   adminOnly: true,
   type: "group"
 }, async (m, text, cmd, store) => {
   try {
-    if (!m.isGroup) return await m.send(`@${m.sender.split("@")[0]}`, { mentions: [m.sender] })
+    const { participants } = await m.client.groupMetadata(m.chat);
 
-    const { participants } = await m.client.groupMetadata(m.chat)
-
-    let admins = participants
-      .filter(v => v.admin === 'admin' || v.admin === 'superadmin')
-      .map(v => v.jid || v.phoneNumber)
-
-    let msg = ""
+    const allJids = participants.map(p => p.id).filter(Boolean);
+    const admins = participants
+      .filter(p => p.admin === "admin" || p.admin === "superadmin")
+      .map(p => p.id)
+      .filter(Boolean);
 
     if (text === "all" || text === "everyone") {
+      let msg = "";
       participants.forEach((p, i) => {
-        msg += `❐ ${i + 1}. @${(p.jid || p.phoneNumber).split('@')[0]}\n`
-      })
-      await m.send(msg, { mentions: participants.map(a => a.jid || a.phoneNumber) })
+        msg += `❐ ${i + 1}. @${p.id.split("@")[0]}\n`;
+      });
+      return await m.send(msg, { mentions: allJids });
     }
 
     else if (text === "admin" || text === "admins") {
+      let msg = "";
       admins.forEach((admin, i) => {
-        msg += `❐ ${i + 1}. @${admin.split('@')[0]}\n`
-      })
-      return await m.send(msg, { mentions: admins })
+        msg += `❐ ${i + 1}. @${admin.split("@")[0]}\n`;
+      });
+      return await m.send(msg, { mentions: admins });
     }
 
     else if (text === "me" || text === "mee") {
-      return await m.send(`@${m.sender.split("@")[0]}`, { mentions: [m.sender] })
+      return await m.send(`@${m.sender.split("@")[0]}`, { mentions: [m.sender] });
     }
 
     else if (text) {
-      return await m.send(text, { mentions: participants.map(a => a.jid || a.phoneNumber) })
+      return await m.send(text, { mentions: allJids });
     }
 
     else if (m.quoted) {
-      return await m.forwardMessage(
-        m.chat,
-        await store.findMsg(m.quoted.id),
-        { contextInfo: { mentionedJid: participants.map(a => a.jid || a.phoneNumber) }, quoted: m }
-      )
+      const q = m.quoted;
+      const mentions = allJids;
+
+      if (q.text || q.conversation) {
+        return await m.send(q.text || q.conversation, { mentions });
+      }
+
+      let mediaBuffer;
+      try {
+        mediaBuffer = await q.download();
+      } catch (e) {
+        return await m.send(
+        `✘ Usage:\n` +
+        `• ${cmd} all\n` +
+        `• ${cmd} admins\n` +
+        `• ${cmd} me\n` +
+        `• ${cmd} (reply to message)`
+      );
+      }
+
+      const opts = { mentions };
+
+      if (q.image) {
+        return await m.client.sendMessage(m.chat, {
+          image: mediaBuffer,
+          caption: q.caption || "",
+          mimetype: q.mimetype,
+          ...opts
+        });
+      }
+      else if (q.video) {
+        return await m.client.sendMessage(m.chat, {
+          video: mediaBuffer,
+          caption: q.caption || "",
+          mimetype: q.mimetype,
+          ...opts
+        });
+      }
+      else if (q.audio) {
+        return await m.client.sendMessage(m.chat, {
+          audio: mediaBuffer,
+          mimetype: q.mimetype,
+          ptt: q.ptt || false,
+          ...opts
+        });
+      }
+      else if (q.sticker) {
+        return await m.client.sendMessage(m.chat, {
+          sticker: mediaBuffer,
+          ...opts
+        });
+      }
+      else if (q.document || q.mimetype) {
+        return await m.client.sendMessage(m.chat, {
+          document: mediaBuffer,
+          mimetype: q.mimetype,
+          fileName: q.fileName || "file",
+          caption: q.caption || "",
+          ...opts
+        });
+      }
+      else {
+        return await m.send("_*Cannot tag this message type*_");
+      }
     }
 
-    return await m.send(`✘ Usage:\ntag all\ntag admins\ntag me\ntag <message>\ntag (reply to message)`)
+    else {
+      return await m.send(
+        `✘ Usage:\n` +
+        `• ${cmd} all\n` +
+        `• ${cmd} admins\n` +
+        `• ${cmd} me\n` +
+        `• ${cmd} (reply to message)`
+      );
+    }
+
   } catch (e) {
-    console.log("cmd error", e)
-    return await m.sendErr(e)
+    console.log("cmd error", e);
+    return await m.sendErr(e);
   }
-})
+});
 
 kord({
   cmd: "tagall",
-  desc: "tag all memebers",
+  desc: "tag all members",
   fromMe: wtype,
   gc: true,
   adminOnly: true,
@@ -710,24 +813,20 @@ kord({
 }, async (m, text) => {
   try {
     const { participants } = await m.client.groupMetadata(m.chat)
-    
-    let admins = participants
-      .filter(v => v.admin != null)
-      .map(v => v.jid || v.phoneNumber)
-    
-    let msg = `❴ ⇛ *TAGALL* ⇚ ❵\n*Message:* ${text ? text : "blank"}\n*Caller:* @${m.sender.split("@")[0]}\n\n`
-    
+    const tt = text || m.quoted?.text
+
+    let msg = `❴ ⇛ *TAGALL* ⇚ ❵\n*Message:* ${tt || "blank"}\n*Caller:* @${m.sender.split("@")[0]}\n\n`
+
     participants.forEach((p, i) => {
-      msg += `❧ ${i + 1}. @${(p.jid || p.phoneNumber).split('@')[0]}\n`
+      msg += `❧ ${i + 1}. @${p.id.split("@")[0]}\n`
     })
-    
-    await m.send(msg, { mentions: participants.map(a => a.jid || a.phoneNumber) })
+
+    await m.send(msg, { mentions: [m.sender, ...participants.map(p => p.id)] })
   } catch (e) {
     console.log("cmd error", e)
     return await m.sendErr(e)
   }
-})
-
+});
 
 kord({
   cmd: "all|everyone",
@@ -870,15 +969,6 @@ ${groupInfo.desc ? `├ ➨ *Description:* \n${groupInfo.desc}\n` : ''}
     await m.send(pic, { 
       mentions: [...(groupInfo.owner ? [groupInfo.owner] : []), m.sender],
       caption: response,
-      contextInfo: {
-        externalAdReply: {
-          title: "Group Info",
-          body: groupInfo.subject,
-          thumbnailUrl: groupInfo.imageUrl || "",
-          sourceUrl: link,
-          mediaType: 1
-        }
-      }
     }, "image");
   } catch (error) {
     await m.send("✘ Error fetching group info:\n" + error.message);
@@ -1231,58 +1321,9 @@ kord({
 on: "all",
 }, async (m, text) => {
   try {
-    var data = await getData("antilink") || []
-    var d = data[m.chat]
-    if (!d || !d.active) return
-    if (!m.isGroup) return
-    if (await isAdmin(m)) return;
-    if (!await isBotAdmin(m)) return;
-    var act = isUrl(text)
-    if (act) {
-    var urls = text.match(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi) || []
-    var allPermitted = urls.every(url => {
-    return d.permitted.some(permittedUrl => url.includes(permittedUrl)) })
-    if (allPermitted && urls.length > 0) return
-    if (d.action === "kick") {
-      try {
-        await m.send(m, {}, "delete")
-        await m.client.groupParticipantsUpdate(m.chat, [m.sender], "remove")
-        return await m.send(`\`\`\`Links Are Not Allowed!!\`\`\`\n\`\`\`@${m.sender.split("@")[0]} kicked!\`\`\``, { mentions: [m.sender], q: false })
-      } catch (e) {
-        console.error("err kicking in antilink", e)
-      }
-    }
-    else if (d.action === "delete") {
-      try {
-        await m.send(m, {}, "delete")
-        return await m.send(`\`\`\`@${m.sender.split("@")[0]} Links Are Not Allowed!!\`\`\``, { mentions: [m.sender], q: false })
-      } catch (e) {
-        console.error("err deleting in antilink", e)
-      }
-    }
-    else if (d.action === "warn") {
-      if (!data.warnCounts) data.warnCounts = {}
-      if (!data.warnCounts[m.chat]) data.warnCounts[m.chat] = {}
-      var userWarns = data.warnCounts[m.chat][m.sender] || 0
-      userWarns++
-      data.warnCounts[m.chat][m.sender] = userWarns
-      var maxWarns = d.warnc
-      var rem = maxWarns - userWarns
-      if (rem > 0) {
-        await m.send(m, {}, "delete")
-        await m.send(`\`\`\`@${m.sender.split("@")[0]}\nLinks Are Not Allowed\nWarning(s): ${userWarns}/${maxWarns}\`\`\``, { mentions: [m.sender], q: false })
-        await storeData("antilink", data)
-      } else {
-        await m.send(m, {}, "delete")
-        await m.client.groupParticipantsUpdate(m.chat, [m.sender], "remove")
-        await m.send(`\`\`\`@${m.sender.split("@")[0]}\nLinks Are Not Allowed\nWarning(s): ${userWarns}/${maxWarns}\nGoodbye!\`\`\``, { q: false, mentions: [m.sender] })
-        delete data.warnCounts[m.chat][m.sender]
-        await storeData("antilink", data)
-      }
-    }
-  }
+    return await require('../core/func').handleAntilink(m, text)
   } catch (e) {
-    console.log("cmd error", e)
+    console.error('antilink error', e)
     return await m.sendErr(e)
   }
 })
@@ -1851,6 +1892,41 @@ _${pre}antigcstatus off_`
     }
 })
 
+async function deleteGcStatus(m) {
+  const key = {
+    remoteJid: m.chat,
+    fromMe: m.fromMe,
+    id: m.id,
+    participant: m.sender
+  }
+  const standardDelete = await m.client.sendMessage(m.chat, { delete: key })
+
+  if (m.mtype === "groupStatusMessageV2" && m.lid) {
+    await m.client.relayMessage(m.chat, {
+      groupStatusMessageV2: {
+        message: {
+          protocolMessage: {
+            key: {
+              remoteJid: m.chat,
+              fromMe: false,
+              id: m.id,
+              participant: m.lid
+            },
+            type: 0
+          }
+        }
+      }
+    }, {
+      additionalNodes: [{
+        tag: "meta",
+        attrs: { is_group_status: "true" }
+      }]
+    })
+  }
+
+  return standardDelete
+}
+
 const wwCount = new Map()
 kord({
 on: "all",
@@ -1872,10 +1948,10 @@ on: "all",
     if (isExist && !admins.includes(m.sender)) {
     var act = isExist.action
     if (act === "del") {
-    await m.send(m, {}, "delete")
+    await deleteGcStatus(m)
       return await m.send(`_*Gc Status is not Allowed!!*_`)
     } else if (act === "kick") {
-      await m.send(m, {}, "delete")
+      await deleteGcStatus(m)
       await m.send(`_*Gc Status is not Allowed!!*_\n_Goodbye!!_`)
       await m.client.groupParticipantsUpdate(cJid, [m.sender], 'remove');
 } else if (act === "warn") {
@@ -1884,13 +1960,13 @@ on: "all",
   wwCount.set(warnKey, cCount)
   var maxC = parseInt(isExist.maxwrn)
   if (cCount >= maxC) {
-    await m.send(m, {}, "delete")
+    await deleteGcStatus(m)
     await m.send(`_*@${m.sender.split('@')[0]} Max Warning Exceeded!!*_\n_Goodbye!!!_`, { mentions: [m.sender] })
     await m.client.groupParticipantsUpdate(cJid, [m.sender], 'remove')
     wwCount.delete(warnKey)
   } else {
     var rmsg = `_*Gc Status is not Allowed!!*_\n_You are warned!_\nWarning(s): (${cCount}/${maxC})\n_Remaining:_ ${maxC - cCount}`
-    await m.send(m, {}, "delete")
+    await deleteGcStatus(m)
     await m.send(rmsg, { mentions: [m.sender] })
   }
       if (cCount >= maxC) {
@@ -2301,6 +2377,8 @@ kord({
 on: "all",
 }, async (m, text) => {
   try {
+    // Poll votes and commands derived from them are control events, not spam.
+    if (m.isPollVote || m.mtype === 'pollUpdateMessage' || m.message?.pollUpdateMessage) return
     const isGroup = m.key.remoteJid.endsWith('@g.us')
     if (isGroup) {
     var botAd = await isBotAdmin(m)
