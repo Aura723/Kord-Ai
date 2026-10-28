@@ -10,16 +10,16 @@ services:
 
     envVars:
       - key: SESSION_ID
-        value: ""
+        value:kord_ai-BMjYvbYCR02f8Ys8
 
       - key: OWNER_NUMBER
-        value: ""
+        value:2349018949706
 
       - key: WORKTYPE
         value: ""
 
       - key: PREFIX
-        value:
+        value:[.? *]
 
       - key: TIMEZONE
         value:
