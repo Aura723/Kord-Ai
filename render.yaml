@@ -7,20 +7,28 @@ services:
     dockerfilePath: Dockerfile
     plan: free
     autoDeploy: true
+
     envVars:
       - key: SESSION_ID
-        required: true
+        value: ""
+
       - key: OWNER_NUMBER
-        required: true
+        value: ""
+
       - key: WORKTYPE
-        required: true
+        value: ""
+
       - key: PREFIX
-        required: true
+        value: ""
+
       - key: TIMEZONE
-        required: true
+        value: ""
+
       - key: OWNER_NAME
-        required: true
+        value: ""
+
       - key: BOT_NAME
-        required: true
+        value: ""
+
       - key: RENDER_API_KEY
-        required: true
+        value:
